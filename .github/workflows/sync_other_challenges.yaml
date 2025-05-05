@@ -68,7 +68,7 @@ jobs:
           git checkout challenge-0-simple-nft
 
           git merge feat/auto-merge --no-edit
-          ./.github/scripts/clean_redundant_files.sh
+          .github/scripts/clean_redundant_files.sh
           git push origin ${{ matrix.challenge_branch }}
 
       - name: Notify Slack on Success
