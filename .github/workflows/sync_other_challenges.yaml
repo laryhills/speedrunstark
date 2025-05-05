@@ -22,7 +22,13 @@ jobs:
       - name: Setup Python # Make sure to use the correct version
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: '3.11'
+      
+      - name: Install Python dependencies (tomli/tomli_w for TOML handling)
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install tomli_w
+          echo "Required Python libraries installed."
 
       - name: Setup Git
         run: |
@@ -35,9 +41,9 @@ jobs:
           git config --local merge.keeptheirs.name "keep-theirs"
           git config --local merge.keeptheirs.driver 'cp %B %A'
 
-          git config --local merge.packagejson.name "merge-packagejson"
-          git config --local merge.packagejson.driver "python3 /path/to/your/merge_package_json.py %O %A %B %P"
-          git config --local merge.packagejson.recursive binary
+          git config --local merge.mergedeps.name "merge-deps"
+          git config --local merge.mergedeps.driver "python3 /.github/scripts/merge_dependencies.py %O %A %B %P"
+          git config --local merge.mergedeps.recursive binary
 
       - name: Update Challenge Branches
         run: |

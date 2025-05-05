@@ -11,3 +11,5 @@ types/** merge=keeptheirs
 app/page.tsx merge=keepmine
 components/Header.tsx merge=keepmine
 public/manifest.json merge=keepmine
+
+package.json merge=mergedeps
