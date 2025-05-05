@@ -53,7 +53,7 @@ jobs:
           git config --local merge.keeptheirs.driver 'cp %B %A'
 
           git config --local merge.mergedeps.name "merge-deps"
-          git config --local merge.mergedeps.driver "python3 .github/scripts/merge_dependencies.py %O %A %B %P"
+          git config --local merge.mergedeps.driver "python3 ~/merge_dependencies.py %O %A %B %P"
           git config --local merge.mergedeps.recursive binary
 
       - name: Pull Latest Changes
@@ -66,7 +66,6 @@ jobs:
         run: |
           echo "Merging feat/auto-merge into ${{ matrix.challenge_branch }}..."
           git checkout challenge-0-simple-nft
-          cp ~/merge_dependencies.py .github/scripts/
 
           git merge feat/auto-merge --no-edit
           ./.github/scripts/clean_redundant_files.sh
