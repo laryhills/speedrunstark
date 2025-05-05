@@ -4,7 +4,7 @@ import json
 import sys
 import os
 import traceback
-import subprocess # Import the subprocess module
+
 from collections import OrderedDict
 
 # --- Built-in TOML Reader (Python 3.11+) ---
@@ -138,40 +138,10 @@ if __name__ == "__main__":
              elif dep_key in merged_conf:
                  del merged_conf[dep_key]
 
-    # --- Write Result AND Stage File ---
+
     if dump_config(merged_conf, current_filepath, original_format):
-        # --- STAGE THE FILE USING GIT ADD ---
-        print(f"Successfully wrote merged content to '{current_filepath}'. Attempting to stage...", file=sys.stderr)
-        try:
-            # Use subprocess.run for safety and control
-            result = subprocess.run(
-                ["git", "add", current_filepath], # Command to run
-                check=True, # Raise CalledProcessError if git add fails
-                capture_output=True, # Capture stdout/stderr
-                text=True # Decode stdout/stderr as text
-            )
-            print(f"Successfully staged '{current_filepath}'.", file=sys.stderr)
-            # print(f"git add stdout:\n{result.stdout}", file=sys.stderr) # Optional debug log
-            # print(f"git add stderr:\n{result.stderr}", file=sys.stderr) # Optional debug log
-            sys.exit(0) # Signal SUCCESS to Git (merge resolved AND staged)
-
-        except FileNotFoundError:
-             # Error if 'git' command itself isn't found
-             print(f"Error: 'git' command not found in PATH. Cannot stage file.", file=sys.stderr)
-             # Even though merge logic succeeded, staging (requested action) failed critically.
-             sys.exit(127) # Indicate command not found
-        except subprocess.CalledProcessError as e:
-            # Error if 'git add' command returns a non-zero exit code
-            print(f"Error: 'git add {current_filepath}' failed with exit code {e.returncode}.", file=sys.stderr)
-            print(f"Stderr from git add:\n{e.stderr}", file=sys.stderr)
-            # Exit non-zero because staging failed
-            sys.exit(e.returncode if e.returncode != 0 else 1) # Ensure non-zero exit
-        except Exception as e:
-            # Catch any other unexpected errors during staging
-            print(f"Unexpected error during 'git add': {e}", file=sys.stderr)
-            traceback.print_exc(file=sys.stderr)
-            sys.exit(1) # General error during staging
-
-    else: # dump_config failed
-        print(f"Merge failed during file write for '{pathname}'.", file=sys.stderr)
-        sys.exit(1) # Signal FAILURE to Git
+        print(f"Successfully merged '{pathname}' using Python driver.", file=sys.stderr)
+        sys.exit(0)
+    else:
+        print(f"Merge failed for '{pathname}'. Falling back to standard merge.", file=sys.stderr)
+        sys.exit(1)
