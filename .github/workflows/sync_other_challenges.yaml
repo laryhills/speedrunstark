@@ -1,9 +1,10 @@
 name: Sync other challenges
+# test: use this branch as intermediate branch to sync changes from scaffold-stark-2 to speedrunstark
 
 on:
   push:
     branches:
-      - base-challenge-template
+      - feat/auto-merge
   workflow_dispatch:
 
 jobs:
@@ -18,6 +19,11 @@ jobs:
             token: ${{ secrets.ORG_GITHUB_TOKEN }}
             fetch-depth: 0
 
+      - name: Setup Python # Make sure to use the correct version
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
       - name: Setup Git
         run: |
           git config --global user.name 'github-actions[bot]'
@@ -25,20 +31,26 @@ jobs:
 
           git config --local merge.keepmine.name "keep-mine"
           git config --local merge.keepmine.driver "true"
+
           git config --local merge.keeptheirs.name "keep-theirs"
           git config --local merge.keeptheirs.driver 'cp %B %A'
 
+          git config --local merge.packagejson.name "merge-packagejson"
+          git config --local merge.packagejson.driver "python3 /path/to/your/merge_package_json.py %O %A %B %P"
+          git config --local merge.packagejson.recursive binary
+
       - name: Update Challenge Branches
         run: |
-          git checkout base-challenge-template
-          git pull origin base-challenge-template
+          git checkout feat/auto-merge
+          git pull origin feat/auto-merge
 
-          echo "Merging base-challenge-template into challenge branches..."
-          git checkout challenge-1-decentralized-staking && git merge base-challenge-template --no-edit && git push origin challenge-1-decentralized-staking
-          git checkout challenge-2-token-vendor && git merge base-challenge-template --no-edit && git push origin challenge-2-token-vendor
-          git checkout challenge-3-dice-game && git merge base-challenge-template --no-edit && git push origin challenge-3-dice-game
-          git checkout challenge-4-build-a-dex && git merge base-challenge-template --no-edit && git push origin challenge-4-build-a-dex
-          git checkout challenge-5-multisig-wallet && git merge base-challenge-template --no-edit && git push origin challenge-5-multisig-wallet
+          echo "Merging feat/auto-merge into challenge branches..."
+          git checkout challenge-0-simple-nft && git merge feat/auto-merge --no-edit && git push origin challenge-0-simple-nft
+          # git checkout challenge-1-decentralized-staking && git merge feat/auto-merge --no-edit && git push origin challenge-1-decentralized-staking
+          # git checkout challenge-2-token-vendor && git merge feat/auto-merge --no-edit && git push origin challenge-2-token-vendor
+          # git checkout challenge-3-dice-game && git merge feat/auto-merge --no-edit && git push origin challenge-3-dice-game
+          # git checkout challenge-4-build-a-dex && git merge feat/auto-merge --no-edit && git push origin challenge-4-build-a-dex
+          # git checkout challenge-5-multisig-wallet && git merge feat/auto-merge --no-edit && git push origin challenge-5-multisig-wallet
 
       - name: Notify Slack on Success
         if: success()
