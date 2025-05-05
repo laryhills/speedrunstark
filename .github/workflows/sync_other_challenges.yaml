@@ -11,6 +11,17 @@ jobs:
   sync:
     runs-on: ubuntu-22.04
 
+    strategy:
+      fail-fast: false # Allows other merges to continue even if one fails
+      matrix:
+        challenge_branch:
+          - challenge-0-simple-nft
+          # - challenge-1-decentralized-staking
+          # - challenge-2-token-vendor
+          # - challenge-3-dice-game
+          # - challenge-4-build-a-dex
+          # - challenge-5-multisig-wallet
+
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -45,18 +56,19 @@ jobs:
           git config --local merge.mergedeps.driver "python3 /.github/scripts/merge_dependencies.py %O %A %B %P"
           git config --local merge.mergedeps.recursive binary
 
-      - name: Update Challenge Branches
+      - name: Pull Latest Changes
         run: |
           git checkout feat/auto-merge
           git pull origin feat/auto-merge
 
-          echo "Merging feat/auto-merge into challenge branches..."
-          git checkout challenge-0-simple-nft && git merge feat/auto-merge --no-edit && git push origin challenge-0-simple-nft
-          # git checkout challenge-1-decentralized-staking && git merge feat/auto-merge --no-edit && git push origin challenge-1-decentralized-staking
-          # git checkout challenge-2-token-vendor && git merge feat/auto-merge --no-edit && git push origin challenge-2-token-vendor
-          # git checkout challenge-3-dice-game && git merge feat/auto-merge --no-edit && git push origin challenge-3-dice-game
-          # git checkout challenge-4-build-a-dex && git merge feat/auto-merge --no-edit && git push origin challenge-4-build-a-dex
-          # git checkout challenge-5-multisig-wallet && git merge feat/auto-merge --no-edit && git push origin challenge-5-multisig-wallet
+      - name: Update Challenge ${{ matrix.challenge_branch }}
+        run: |
+          echo "Merging feat/auto-merge into ${{ matrix.challenge_branch }}..."
+          git checkout challenge-0-simple-nft
+          git merge feat/auto-merge --no-edit
+          git add .
+          ./.github/scripts/clean_redundant_files.sh
+          git push origin ${{ matrix.challenge_branch }}
 
       - name: Notify Slack on Success
         if: success()
