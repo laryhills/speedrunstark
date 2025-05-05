@@ -4,13 +4,13 @@ import json
 import sys
 import os
 import traceback
+import subprocess # Import the subprocess module
 from collections import OrderedDict
 
 # --- Built-in TOML Reader (Python 3.11+) ---
 try:
-    import tomllib # Use built-in reader
+    import tomllib
 except ImportError:
-    # This should not happen if we ensure Python 3.11+ in the environment
     print("Error: 'tomllib' not found. This script requires Python 3.11+.", file=sys.stderr)
     sys.exit(127)
 
@@ -19,7 +19,7 @@ try:
     import tomli_w
 except ImportError:
     print("Error: 'tomli_w' library not found. Please install it (`pip install tomli_w`)", file=sys.stderr)
-    sys.exit(127) # Indicate dependency missing
+    sys.exit(127)
 
 
 # --- Configuration ---
@@ -34,15 +34,12 @@ def load_config(filepath):
 
     try:
         with open(filepath, 'rb') as f: # Read in binary mode for tomllib
-            # Try TOML first using built-in tomllib
             try:
-                # Use tomllib.load here
                 return tomllib.load(f)
             except tomllib.TOMLDecodeError:
-                # If TOML fails, rewind and try JSON
                 f.seek(0)
                 try:
-                    f.close() # Close binary handle
+                    f.close()
                     with open(filepath, 'r', encoding='utf-8') as f_text:
                        return json.load(f_text, object_pairs_hook=OrderedDict)
                 except json.JSONDecodeError as json_err:
@@ -51,7 +48,7 @@ def load_config(filepath):
                 except Exception as e:
                     print(f"Error reading {filepath} as JSON after TOML failure: {e}", file=sys.stderr)
                     return None
-            except Exception as e: # Catch other potential issues reading TOML
+            except Exception as e:
                 print(f"Unexpected error reading {filepath} as TOML: {e}", file=sys.stderr)
                 return None
 
@@ -71,9 +68,9 @@ def dump_config(data, filepath, original_format='json'):
 
     try:
         if format_to_write == 'toml':
-            with open(filepath, 'wb') as f: # Write in binary mode for tomli_w
-                tomli_w.dump(data, f) # Use tomli_w.dump for writing
-        else: # Default to JSON
+            with open(filepath, 'wb') as f:
+                tomli_w.dump(data, f)
+        else:
             with open(filepath, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
                 f.write('\n')
@@ -101,7 +98,6 @@ def merge_dependency_section(ancestor_deps, ours_deps, theirs_deps):
 
     return merged
 
-
 # --- Main Script Logic ---
 if __name__ == "__main__":
     if len(sys.argv) < 5:
@@ -111,7 +107,7 @@ if __name__ == "__main__":
     ancestor_filepath = sys.argv[1]
     current_filepath = sys.argv[2]
     other_filepath = sys.argv[3]
-    pathname = sys.argv[4]
+    pathname = sys.argv[4]          # This is '%P', the original filename
 
     print(f"Attempting custom merge for: {pathname}", file=sys.stderr)
 
@@ -142,9 +138,40 @@ if __name__ == "__main__":
              elif dep_key in merged_conf:
                  del merged_conf[dep_key]
 
+    # --- Write Result AND Stage File ---
     if dump_config(merged_conf, current_filepath, original_format):
-        print(f"Successfully merged '{pathname}' using Python driver.", file=sys.stderr)
-        sys.exit(0)
-    else:
-        print(f"Merge failed for '{pathname}'. Falling back to standard merge.", file=sys.stderr)
-        sys.exit(1)
+        # --- STAGE THE FILE USING GIT ADD ---
+        print(f"Successfully wrote merged content to '{current_filepath}'. Attempting to stage...", file=sys.stderr)
+        try:
+            # Use subprocess.run for safety and control
+            result = subprocess.run(
+                ["git", "add", current_filepath], # Command to run
+                check=True, # Raise CalledProcessError if git add fails
+                capture_output=True, # Capture stdout/stderr
+                text=True # Decode stdout/stderr as text
+            )
+            print(f"Successfully staged '{current_filepath}'.", file=sys.stderr)
+            # print(f"git add stdout:\n{result.stdout}", file=sys.stderr) # Optional debug log
+            # print(f"git add stderr:\n{result.stderr}", file=sys.stderr) # Optional debug log
+            sys.exit(0) # Signal SUCCESS to Git (merge resolved AND staged)
+
+        except FileNotFoundError:
+             # Error if 'git' command itself isn't found
+             print(f"Error: 'git' command not found in PATH. Cannot stage file.", file=sys.stderr)
+             # Even though merge logic succeeded, staging (requested action) failed critically.
+             sys.exit(127) # Indicate command not found
+        except subprocess.CalledProcessError as e:
+            # Error if 'git add' command returns a non-zero exit code
+            print(f"Error: 'git add {current_filepath}' failed with exit code {e.returncode}.", file=sys.stderr)
+            print(f"Stderr from git add:\n{e.stderr}", file=sys.stderr)
+            # Exit non-zero because staging failed
+            sys.exit(e.returncode if e.returncode != 0 else 1) # Ensure non-zero exit
+        except Exception as e:
+            # Catch any other unexpected errors during staging
+            print(f"Unexpected error during 'git add': {e}", file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)
+            sys.exit(1) # General error during staging
+
+    else: # dump_config failed
+        print(f"Merge failed during file write for '{pathname}'.", file=sys.stderr)
+        sys.exit(1) # Signal FAILURE to Git
