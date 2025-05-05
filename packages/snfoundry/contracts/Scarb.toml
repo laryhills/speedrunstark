@@ -3,25 +3,29 @@ name = "contracts"
 version = "0.2.0"
 edition = "2024_07"
 
-# See more keys and their definitions at https://docs.swmansion.com/scarb/docs/reference/manifest.html
-
 [dependencies]
 starknet = "2.11.4"
 openzeppelin_access = "1.0.0"
 openzeppelin_token = "1.0.0"
 openzeppelin_introspection = "1.0.0"
 
-[dev-dependencies]
-openzeppelin_utils = "1.0.0"
-openzeppelin_testing = "3.0.0"
-snforge_std = "0.41.0"
-assert_macros = "2.9.4"
+[dependencies.openzeppelin]
+git = "https://github.com/OpenZeppelin/cairo-contracts.git"
+tag = "v0.14.0"
 
-[[target.starknet-contract]]
-casm = true # taggle this to `false` to speed up compilation/script tests
+[dependencies.snforge_std]
+git = "https://github.com/foundry-rs/starknet-foundry"
+tag = "v0.27.0"
+
+[target]
+starknet-contract = [
+    { casm = true },
+]
 
 [tool.scarb]
-allow-prebuilt-plugins = ["snforge_std"]
+allow-prebuilt-plugins = [
+    "snforge_std",
+]
 
 [tool.fmt]
 sort-module-level-items = true
@@ -29,4 +33,12 @@ sort-module-level-items = true
 [[tool.snforge.fork]]
 name = "SEPOLIA_LATEST"
 url = "https://starknet-sepolia.public.blastapi.io/rpc/v0_8"
-block_id.tag = "latest"
+
+[tool.snforge.fork.block_id]
+tag = "latest"
+
+[dev-dependencies]
+openzeppelin_utils = "1.0.0"
+openzeppelin_testing = "3.0.0"
+snforge_std = "0.41.0"
+assert_macros = "2.9.4"
